@@ -15,6 +15,15 @@ var budgetController = (function() {
         this.value = value;
     };
 
+    // Calculate the total incomes or expenses
+    var calculateTotal = function(type) {
+        var sum = 0;
+        data.allItems[type].forEach(function(current) {
+            sum += current.value;
+        });
+        data.totals[type] = sum;
+    };
+
     // The object that hold all the budget datas
     var data = {
         allItems : {
@@ -25,6 +34,8 @@ var budgetController = (function() {
             inc: 0, // The total amount of incomes
             exp: 0, // The total amount of expenses
         },
+        budget: 0,
+        percentage: -1,
     };
 
     // Expose the public elements
@@ -53,6 +64,30 @@ var budgetController = (function() {
             // Return the created element
             return newItem;
         },
+        calaculateBudget: function() {
+            // Calculate total incomes and expenses
+            calculateTotal('exp');
+            calculateTotal('inc');
+
+            // Calculate the budget (incomes - expenses)
+            data.budget = data.totals.inc - data.totals.exp;
+
+            // Calculate the percentage of incomes that have been spent
+            if(data.totals.inc > 0) {
+                data.percentage = Math.round((data.totals.exp / data.totals.inc) * 100);
+            } else {
+                data.percentage = -1;
+            }
+
+        },
+        getBudget: function() {
+            return {
+                budget: data.budget,
+                totalExp: data.totals.exp,
+                totalInc: data.totals.inc,
+                percentage: data.percentage,
+            };
+        },
         testData: function() {
             console.log(data);
         },
@@ -61,7 +96,7 @@ var budgetController = (function() {
 })();
 
 // Testing
-budgetController.testData();
+// budgetController.testData();
 
 
 // The piece of code what control the UI
@@ -77,6 +112,10 @@ var UIController = (function() {
         inputButton: '.add__btn',
         incomesPanel: '.income__list',
         expensesPanel: '.expenses__list',
+        budgetLabel: '.budget__value',
+        incomesLabel: '.budget__income--value',
+        expensesLabel: '.budget__expenses--value',
+        percentageLabel: '.budget__expenses--percentage',
     };
 
     return {
@@ -132,6 +171,17 @@ var UIController = (function() {
             // Set the focus on the first array element
             fieldsArray[0].focus();
         },
+        displayBudget: function(obj) {
+            document.querySelector(elements.budgetLabel).textContent = obj.budget;
+            document.querySelector(elements.incomesLabel).textContent = obj.totalInc;
+            document.querySelector(elements.expensesLabel).textContent = obj.totalExp;
+
+            if(obj.percentage > 0) {
+                document.querySelector(elements.percentageLabel).textContent = obj.percentage + '%';
+            } else {
+                document.querySelector(elements.percentageLabel).textContent = '---';
+            }
+        },
         getElements: function() {
             return elements;
         }
@@ -182,16 +232,28 @@ var controller = (function(budgetCtrl, UICtrl) {
     };
 
     var updateBudget = function() {
+        var budget;
         // 1. Calculate the budget
+        budgetCtrl.calaculateBudget();
 
         // 2. Return the budget
+        budget = budgetCtrl.getBudget();
 
-        // 2. Display the budget in the UI
+        // 3. Display the budget in the UI
+        UICtrl.displayBudget(budget);
     };
 
     return {
         init: function() {
             console.log('Application started...');
+            // Initialize the budget elements
+            UICtrl.displayBudget(
+                {
+                    budget: 0,
+                    totalExp: 0,
+                    totalInc: 0,
+                    percentage: -1,
+                });
             setupEventListeners();
         },
     };
